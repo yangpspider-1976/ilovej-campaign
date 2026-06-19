@@ -84,37 +84,40 @@ async function sendViaMovider(phone: string, message: string): Promise<SmsResult
       body,
     });
 
+    // Movider's /v1/sms response indicates success by returning a message_id
+    // for each recipient in phone_number_list; failures come back as a
+    // top-level `error` array (e.g. [{ code, message }]), not a status field.
     const data = await res.json() as {
       phone_number_list?: Array<{
-        phone_number: string;
-        status: number;       // 1 = success
+        to?: string;
+        phone_number?: string;
+        number?: string;
         message_id?: string;
-        error?: string;
       }>;
-      error?: string;
+      error?: Array<{ code?: number | string; message?: string }> | string;
       error_text?: string;
+      remaining_balance?: number;
     };
 
-    if (!res.ok || data.error) {
+    const rawErr = Array.isArray(data.error)
+      ? data.error.map(e => `${e.code ?? ""}:${e.message ?? ""}`).join("; ")
+      : (typeof data.error === "string" ? data.error : undefined);
+
+    if (!res.ok || rawErr) {
       return {
         success: false,
-        error: data.error_text ?? data.error ?? `Movider HTTP ${res.status}`,
+        error: rawErr ?? data.error_text ?? `Movider HTTP ${res.status}: ${JSON.stringify(data)}`,
       };
     }
 
     const result = data.phone_number_list?.[0];
-    if (!result) {
-      return { success: false, error: "Movider: empty response" };
+    if (result?.message_id) {
+      return { success: true, provider_message_id: result.message_id };
     }
 
-    if (result.status !== 1) {
-      return {
-        success: false,
-        error: result.error ?? `Movider status ${result.status}`,
-      };
-    }
-
-    return { success: true, provider_message_id: result.message_id };
+    // Reached Movider but no message_id and no explicit error -- surface the
+    // raw response so the actual shape can be diagnosed.
+    return { success: false, error: `Movider: no message_id in response: ${JSON.stringify(data)}` };
   } catch (e) {
     return { success: false, error: String(e) };
   }
