@@ -1,111 +1,144 @@
 {%- comment -%}
   iLoveJ voucher claim form. Self-contained section that owns the form and posts
-  directly to the campaign API. Inherits the theme's typography so it blends with
-  the rest of the page; styling cues (black button, centered layout, red errors)
-  match the original Shopify Forms block it replaces.
+  directly to the campaign API. Styled to match the original Shopify Forms block
+  1:1 (flag + "+63" phone field, placeholder-only name/email, two consent
+  headings with checkboxes, full-width black button).
 {%- endcomment -%}
 
-<div class="ilovej-section page-width">
-  <form id="ilovej-form" class="ilovej-form" novalidate>
+<div class="ij-section page-width">
+  <form id="ilovej-form" class="ij-form" novalidate>
 
-    <div class="ilovej-field">
-      <label for="ilovej-phone">Mobile Number <span class="ilovej-req">*</span></label>
-      <input type="tel" id="ilovej-phone" name="phone"
-        placeholder="09171234567" autocomplete="tel" inputmode="tel" />
-      <small>Philippine mobile numbers only (Globe, Smart, DITO)</small>
+    <div class="ij-phone-row">
+      <div class="ij-flag" aria-hidden="true">
+        <span class="ij-flag-emoji">🇵🇭</span>
+        <span class="ij-caret">▾</span>
+      </div>
+      <div class="ij-phone-box">
+        <span class="ij-phone-label">Phone</span>
+        <input type="tel" id="ilovej-phone" name="phone"
+          value="+63" autocomplete="tel" inputmode="tel" />
+      </div>
     </div>
 
-    <div class="ilovej-field">
-      <label for="ilovej-name">Name <span class="ilovej-opt">(optional)</span></label>
-      <input type="text" id="ilovej-name" name="name" placeholder="Your name" autocomplete="name" />
-    </div>
+    <input type="text" id="ilovej-name" name="name" class="ij-input" placeholder="Name" autocomplete="name" />
 
-    <div class="ilovej-field">
-      <label for="ilovej-email">Email <span class="ilovej-opt">(optional)</span></label>
-      <input type="email" id="ilovej-email" name="email" placeholder="your@email.com" autocomplete="email" />
-    </div>
+    <input type="email" id="ilovej-email" name="email" class="ij-input" placeholder="Email" autocomplete="email" />
 
-    <label class="ilovej-check">
+    <p class="ij-consent-head">Email Consent.</p>
+    <label class="ij-check">
       <input type="checkbox" id="ilovej-consent-sms" />
-      <span>I agree to receive my iLoveJ voucher and campaign confirmation by SMS. <span class="ilovej-req">*</span></span>
+      <span>I agree to have a consent on my email.</span>
     </label>
 
-    <label class="ilovej-check">
+    <p class="ij-consent-head">Marketing opt-in (Optional)</p>
+    <label class="ij-check">
       <input type="checkbox" id="ilovej-consent-mkt" />
-      <span>I agree to receive future promotional offers from iLoveJ. (optional)</span>
+      <span>I agree to receive marketing emails from I LOVE J.</span>
     </label>
 
-    <div id="ilovej-msg" class="ilovej-msg" role="status" aria-live="polite"></div>
+    <div id="ilovej-msg" class="ij-msg" role="status" aria-live="polite"></div>
 
-    <button type="submit" id="ilovej-btn" class="ilovej-btn">Claim My Voucher</button>
-
-    <p class="ilovej-fineprint">One voucher per customer &bull; Limited quantities only</p>
+    <button type="submit" id="ilovej-btn" class="ij-btn">Claim My Voucher</button>
   </form>
 </div>
 
 <style>
-  .ilovej-section { padding: 0 20px 52px; text-align: center; }
-  .ilovej-form {
-    max-width: 460px;
+  .ij-section { padding: 0 20px 52px; }
+  .ij-form {
+    max-width: 600px;
     margin: 0 auto;
-    text-align: center;
     font-family: inherit;
-    color: #202020;
+    color: #1a1a1a;
+    text-align: left;
   }
-  .ilovej-field { margin-bottom: 18px; text-align: left; }
-  .ilovej-form label { display: block; font-size: 1.4rem; font-weight: 600; margin-bottom: 6px; }
-  .ilovej-req { color: #E02229; }
-  .ilovej-opt { font-weight: 400; color: #888; }
-  .ilovej-form input[type="tel"],
-  .ilovej-form input[type="text"],
-  .ilovej-form input[type="email"] {
-    width: 100%;
-    padding: 13px 14px;
-    border: 1px solid #cfcfcf;
-    border-radius: 6px;
-    font-size: 1.5rem;
-    font-family: inherit;
-    color: #202020;
-    box-sizing: border-box;
+
+  /* Phone row: flag selector + phone box, side by side */
+  .ij-phone-row { display: flex; gap: 12px; margin-bottom: 16px; }
+  .ij-flag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 78px;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
     background: #fff;
   }
-  .ilovej-form input:focus { outline: none; border-color: #202020; }
-  .ilovej-field small { display: block; font-size: 1.1rem; color: #888; margin-top: 5px; }
-  .ilovej-check {
+  .ij-flag-emoji { font-size: 20px; line-height: 1; }
+  .ij-caret { font-size: 11px; color: #555; }
+  .ij-phone-box {
+    flex: 1;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px 16px;
+  }
+  .ij-phone-label { display: block; font-size: 12px; color: #9b9b9b; margin-bottom: 2px; }
+  .ij-phone-box input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 0;
+    font-size: 16px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: transparent;
+  }
+
+  /* Standard inputs */
+  .ij-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #fff;
+  }
+  .ij-form input::placeholder { color: #9b9b9b; }
+  .ij-form input:focus { outline: none; border-color: #1a1a1a; }
+  .ij-phone-box:focus-within { border-color: #1a1a1a; }
+
+  /* Consent */
+  .ij-consent-head { font-size: 16px; font-weight: 600; margin: 4px 0 10px; }
+  .ij-check {
     display: flex;
     gap: 10px;
     align-items: flex-start;
-    text-align: left;
-    font-size: 1.2rem;
-    font-weight: 400 !important;
-    margin-bottom: 14px;
+    font-size: 16px;
+    margin-bottom: 18px;
     cursor: pointer;
     line-height: 1.4;
   }
-  .ilovej-check input { margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; }
-  .ilovej-btn {
+  .ij-check input { margin: 2px 0 0; flex-shrink: 0; width: 18px; height: 18px; cursor: pointer; }
+
+  /* Button */
+  .ij-btn {
     width: 100%;
-    padding: 15px;
-    background: #202020;
+    padding: 17px;
+    background: #1c1c1c;
     color: #fff;
     border: none;
-    border-radius: 6px;
-    font-size: 1.6rem;
-    font-weight: 600;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
     font-family: inherit;
     cursor: pointer;
-    margin-top: 6px;
     transition: opacity .15s ease;
   }
-  .ilovej-btn:hover { opacity: .85; }
-  .ilovej-btn:disabled { opacity: .55; cursor: default; }
-  .ilovej-fineprint { font-size: 1.1rem; color: #888; margin-top: 12px; }
-  .ilovej-msg {
+  .ij-btn:hover { opacity: .88; }
+  .ij-btn:disabled { opacity: .55; cursor: default; }
+
+  /* Inline result message */
+  .ij-msg {
     display: none;
     padding: 14px;
     border-radius: 8px;
     margin-bottom: 16px;
-    font-size: 1.4rem;
+    font-size: 15px;
     font-weight: 600;
   }
 </style>
@@ -123,6 +156,11 @@
   const btn     = document.getElementById("ilovej-btn");
   const msg     = document.getElementById("ilovej-msg");
 
+  // Keep the "+63" prefix from being deleted accidentally.
+  phoneEl.addEventListener("focus", function () {
+    if (!phoneEl.value) phoneEl.value = "+63";
+  });
+
   function show(html, err) {
     msg.innerHTML = html;
     msg.style.display = "block";
@@ -132,8 +170,9 @@
   }
 
   function normalize(raw) {
-    const v = raw.trim().replace(/[\s\-().]/g, "");
+    let v = (raw || "").trim().replace(/[\s\-().]/g, "");
     if (/^\+639\d{9}$/.test(v)) return v;
+    if (/^\+6309\d{9}$/.test(v)) return "+63" + v.slice(4);   // "+630917..." -> drop the 0
     if (/^09\d{9}$/.test(v))    return "+63" + v.slice(1);
     if (/^639\d{9}$/.test(v))   return "+" + v;
     if (/^9\d{9}$/.test(v))     return "+63" + v;
@@ -145,7 +184,7 @@
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    if (!cSms.checked) { show("Please agree to receive your voucher by SMS to continue.", true); return; }
+    if (!cSms.checked) { show("Please tick the consent box to continue.", true); return; }
 
     const phone = normalize(phoneEl.value);
     if (!phone) { show("Please enter a valid Philippine mobile number (e.g. 09171234567).", true); return; }
