@@ -9,7 +9,7 @@
 
     <div class="ij-phone-row">
       <div class="ij-flag" aria-hidden="true">
-        <svg class="ij-flag-svg" viewBox="0 0 32 16" width="26" height="13" role="img" aria-label="Philippines">
+        <svg class="ij-flag-svg" viewBox="0 0 32 16" width="34" height="17" role="img" aria-label="Philippines">
           <rect width="32" height="8" fill="#0038A8"></rect>
           <rect y="8" width="32" height="8" fill="#CE1126"></rect>
           <polygon points="0,0 0,16 13.86,8" fill="#FFFFFF"></polygon>
@@ -18,7 +18,6 @@
           <circle cx="1.9" cy="14" r="0.7" fill="#FCD116"></circle>
           <circle cx="11.2" cy="8" r="0.7" fill="#FCD116"></circle>
         </svg>
-        <span class="ij-caret">▾</span>
       </div>
       <div class="ij-phone-box">
         <span class="ij-phone-label">Phone</span>
@@ -57,10 +56,11 @@
   .ij-form {
     max-width: 446px;
     margin: 0 auto;
-    font-family: inherit;
+    /* Explicit system stack: the theme body font has no bold weight, so we use
+       a stack that always includes bold (matches the original Forms block). */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     color: #1a1a1a;
     text-align: left;
-    /* Theme may set font-synthesis:none; re-enable so bold actually renders. */
     font-synthesis: weight;
     -webkit-font-synthesis: weight;
   }
@@ -71,14 +71,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 7px;
-    width: 60px;
+    width: 56px;
     border: 1px solid #e3e3e3;
     border-radius: 6px;
     background: #fff;
   }
   .ij-flag-svg { border-radius: 2px; display: block; }
-  .ij-caret { font-size: 10px; color: #555; }
   .ij-phone-box {
     flex: 1;
     border: 1px solid #e3e3e3;
