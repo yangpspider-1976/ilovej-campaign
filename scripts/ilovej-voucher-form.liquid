@@ -1,59 +1,114 @@
-<div class="page-width" style="padding: 40px 20px; text-align: center;">
-  <div style="max-width: 480px; margin: 0 auto; text-align: left;">
+{%- comment -%}
+  iLoveJ voucher claim form. Self-contained section that owns the form and posts
+  directly to the campaign API. Inherits the theme's typography so it blends with
+  the rest of the page; styling cues (black button, centered layout, red errors)
+  match the original Shopify Forms block it replaces.
+{%- endcomment -%}
 
-    <form id="ilovej-form" novalidate>
+<div class="ilovej-section page-width">
+  <form id="ilovej-form" class="ilovej-form" novalidate>
 
-      <div style="margin-bottom: 16px;">
-        <label style="display:block; font-size:14px; font-weight:600; margin-bottom:6px;">
-          Mobile Number <span style="color:#e00;">*</span>
-        </label>
-        <input type="tel" id="ilovej-phone"
-          placeholder="09171234567 or +639171234567"
-          autocomplete="tel" inputmode="tel"
-          style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:15px; box-sizing:border-box;" />
-        <div style="font-size:12px; color:#888; margin-top:4px;">Philippine mobile numbers only (Globe, Smart, DITO)</div>
-      </div>
+    <div class="ilovej-field">
+      <label for="ilovej-phone">Mobile Number <span class="ilovej-req">*</span></label>
+      <input type="tel" id="ilovej-phone" name="phone"
+        placeholder="09171234567" autocomplete="tel" inputmode="tel" />
+      <small>Philippine mobile numbers only (Globe, Smart, DITO)</small>
+    </div>
 
-      <div style="margin-bottom:16px;">
-        <label style="display:block; font-size:14px; font-weight:600; margin-bottom:6px;">Name <span style="font-weight:400; color:#888;">(optional)</span></label>
-        <input type="text" id="ilovej-name" placeholder="Your name" autocomplete="name"
-          style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:15px; box-sizing:border-box;" />
-      </div>
+    <div class="ilovej-field">
+      <label for="ilovej-name">Name <span class="ilovej-opt">(optional)</span></label>
+      <input type="text" id="ilovej-name" name="name" placeholder="Your name" autocomplete="name" />
+    </div>
 
-      <div style="margin-bottom:16px;">
-        <label style="display:block; font-size:14px; font-weight:600; margin-bottom:6px;">Email <span style="font-weight:400; color:#888;">(optional)</span></label>
-        <input type="email" id="ilovej-email" placeholder="your@email.com" autocomplete="email"
-          style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:15px; box-sizing:border-box;" />
-      </div>
+    <div class="ilovej-field">
+      <label for="ilovej-email">Email <span class="ilovej-opt">(optional)</span></label>
+      <input type="email" id="ilovej-email" name="email" placeholder="your@email.com" autocomplete="email" />
+    </div>
 
-      <div style="margin-bottom:12px; display:flex; gap:10px; align-items:flex-start;">
-        <input type="checkbox" id="ilovej-consent-sms" style="margin-top:3px; flex-shrink:0; width:16px; height:16px; cursor:pointer;" />
-        <label for="ilovej-consent-sms" style="font-size:13px; cursor:pointer; line-height:1.4;">
-          I agree to receive my iLoveJ voucher and campaign confirmation by SMS. <span style="color:#e00;">*</span>
-        </label>
-      </div>
+    <label class="ilovej-check">
+      <input type="checkbox" id="ilovej-consent-sms" />
+      <span>I agree to receive my iLoveJ voucher and campaign confirmation by SMS. <span class="ilovej-req">*</span></span>
+    </label>
 
-      <div style="margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
-        <input type="checkbox" id="ilovej-consent-mkt" style="margin-top:3px; flex-shrink:0; width:16px; height:16px; cursor:pointer;" />
-        <label for="ilovej-consent-mkt" style="font-size:13px; cursor:pointer; line-height:1.4;">
-          I agree to receive future promotional offers from iLoveJ. (optional)
-        </label>
-      </div>
+    <label class="ilovej-check">
+      <input type="checkbox" id="ilovej-consent-mkt" />
+      <span>I agree to receive future promotional offers from iLoveJ. (optional)</span>
+    </label>
 
-      <div id="ilovej-msg" style="display:none; padding:14px; border-radius:8px; margin-bottom:16px; font-size:15px; font-weight:600; text-align:center;"></div>
+    <div id="ilovej-msg" class="ilovej-msg" role="status" aria-live="polite"></div>
 
-      <button type="submit" id="ilovej-btn"
-        style="width:100%; padding:14px; background:#000; color:#fff; border:none; border-radius:6px; font-size:16px; font-weight:600; cursor:pointer;">
-        Claim My Voucher
-      </button>
+    <button type="submit" id="ilovej-btn" class="ilovej-btn">Claim My Voucher</button>
 
-      <p style="font-size:12px; color:#888; margin-top:12px; text-align:center;">
-        One voucher per customer &bull; Limited quantities only
-      </p>
-
-    </form>
-  </div>
+    <p class="ilovej-fineprint">One voucher per customer &bull; Limited quantities only</p>
+  </form>
 </div>
+
+<style>
+  .ilovej-section { padding: 0 20px 52px; text-align: center; }
+  .ilovej-form {
+    max-width: 460px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: inherit;
+    color: #202020;
+  }
+  .ilovej-field { margin-bottom: 18px; text-align: left; }
+  .ilovej-form label { display: block; font-size: 1.4rem; font-weight: 600; margin-bottom: 6px; }
+  .ilovej-req { color: #E02229; }
+  .ilovej-opt { font-weight: 400; color: #888; }
+  .ilovej-form input[type="tel"],
+  .ilovej-form input[type="text"],
+  .ilovej-form input[type="email"] {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid #cfcfcf;
+    border-radius: 6px;
+    font-size: 1.5rem;
+    font-family: inherit;
+    color: #202020;
+    box-sizing: border-box;
+    background: #fff;
+  }
+  .ilovej-form input:focus { outline: none; border-color: #202020; }
+  .ilovej-field small { display: block; font-size: 1.1rem; color: #888; margin-top: 5px; }
+  .ilovej-check {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    text-align: left;
+    font-size: 1.2rem;
+    font-weight: 400 !important;
+    margin-bottom: 14px;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .ilovej-check input { margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; }
+  .ilovej-btn {
+    width: 100%;
+    padding: 15px;
+    background: #202020;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.6rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: opacity .15s ease;
+  }
+  .ilovej-btn:hover { opacity: .85; }
+  .ilovej-btn:disabled { opacity: .55; cursor: default; }
+  .ilovej-fineprint { font-size: 1.1rem; color: #888; margin-top: 12px; }
+  .ilovej-msg {
+    display: none;
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+</style>
 
 <script>
 (function () {
@@ -71,9 +126,9 @@
   function show(html, err) {
     msg.innerHTML = html;
     msg.style.display = "block";
-    msg.style.background = err ? "#ffeaea" : "#eaffea";
-    msg.style.color      = err ? "#b00020" : "#1a5c2a";
-    msg.style.border     = err ? "1px solid #f5c2c2" : "1px solid #a8d5b0";
+    msg.style.background = err ? "#fdeaea" : "#eaf7ee";
+    msg.style.color      = err ? "#E02229" : "#1a7a3a";
+    msg.style.border     = err ? "1px solid #f3c2c2" : "1px solid #a9dcb8";
   }
 
   function normalize(raw) {
@@ -90,10 +145,10 @@
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    if (!cSms.checked) { show("❌ Please agree to receive your voucher by SMS to continue.", true); return; }
+    if (!cSms.checked) { show("Please agree to receive your voucher by SMS to continue.", true); return; }
 
     const phone = normalize(phoneEl.value);
-    if (!phone) { show("❌ Please enter a valid Philippine mobile number (e.g. 09171234567).", true); return; }
+    if (!phone) { show("Please enter a valid Philippine mobile number (e.g. 09171234567).", true); return; }
 
     btn.disabled = true;
     btn.textContent = "Processing…";
@@ -118,18 +173,18 @@
       const data = await res.json();
 
       if (data.already_claimed) {
-        show("✅ This number already has a voucher — check your SMS inbox!", false);
+        show("This number already has a voucher — check your SMS inbox!", false);
       } else if (!data.success) {
-        show("❌ " + (data.error || "Something went wrong. Please try again."), true);
+        show(data.error || "Something went wrong. Please try again.", true);
       } else {
         show(data.sms_sent
-          ? `🎉 You got <strong>${data.discount_tier}% OFF</strong>! Your voucher code was sent to your mobile via SMS.`
-          : "✅ Voucher claimed! If you don't receive an SMS within a few minutes, please contact support.",
+          ? "🎉 You got <strong>" + data.discount_tier + "% OFF</strong>! Your voucher code was sent to your mobile via SMS."
+          : "Voucher claimed! If you don't receive an SMS within a few minutes, please contact support.",
           false);
         form.reset();
       }
-    } catch {
-      show("❌ Network error. Please check your connection and try again.", true);
+    } catch (err) {
+      show("Network error. Please check your connection and try again.", true);
     } finally {
       btn.disabled = false;
       btn.textContent = "Claim My Voucher";
