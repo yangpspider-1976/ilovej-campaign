@@ -53,7 +53,17 @@ export async function sendSms(phone: string, message: string): Promise<SmsResult
 async function sendViaMovider(phone: string, message: string): Promise<SmsResult> {
   const apiKey = process.env.SMS_API_KEY;
   const apiSecret = process.env.SMS_API_SECRET;
-  const from = process.env.SMS_SENDER_ID ?? "iLoveJ";
+  let from = process.env.SMS_SENDER_ID ?? "iLoveJ";
+  let text = message;
+
+  // Trial-mode override: Movider trial accounts can ONLY use the default sender
+  // name and the default "stability check" message -- custom sender/text are
+  // rejected. Set MOVIDER_TRIAL_MODE=true to prove end-to-end delivery on a
+  // trial account before upgrading. Remove the env var to send real vouchers.
+  if (process.env.MOVIDER_TRIAL_MODE === "true") {
+    from = process.env.MOVIDER_TRIAL_SENDER ?? "DemoP";
+    text = process.env.MOVIDER_TRIAL_MESSAGE ?? "Good Day! This is a SMS for checking stability.";
+  }
 
   if (!apiKey || !apiSecret) {
     return { success: false, error: "Movider credentials not configured (SMS_API_KEY, SMS_API_SECRET)" };
@@ -63,7 +73,7 @@ async function sendViaMovider(phone: string, message: string): Promise<SmsResult
     api_key: apiKey,
     api_secret: apiSecret,
     to: phone,
-    text: message,
+    text,
     from,
   });
 
