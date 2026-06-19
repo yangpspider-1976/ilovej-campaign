@@ -131,20 +131,6 @@ async function seedDefaultCampaign(): Promise<void> {
   const end = new Date(now);
   end.setDate(end.getDate() + 14);
 
-  await db.execute({
-    sql: `INSERT INTO campaigns (campaign_id, campaign_name, start_date, end_date, total_voucher_limit, status, source_channel)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      "ilovej_meta_test",
-      "iLoveJ Comment-to-DM Voucher Campaign",
-      now.toISOString().split("T")[0],
-      end.toISOString().split("T")[0],
-      1000,
-      "active",
-      "meta",
-    ],
-  });
-
   // Seed 1,000 vouchers: 30%×600, 40%×250, 50%×100, 70%×40, 90%×10
   const tiers = [
     { tier: 30, count: 600 },
@@ -154,21 +140,50 @@ async function seedDefaultCampaign(): Promise<void> {
     { tier: 90, count: 10 },
   ];
 
-  const stmts: { sql: string; args: (string | number)[] }[] = [];
+  // Generate guaranteed-unique discount codes. An 8-hex-char suffix makes
+  // collisions astronomically unlikely, and the Set guard makes them impossible.
+  const seenCodes = new Set<string>();
+  const voucherStmts: { sql: string; args: (string | number)[] }[] = [];
   for (const { tier, count } of tiers) {
     for (let i = 0; i < count; i++) {
-      const suffix = randomUUID().replace(/-/g, "").slice(0, 5).toUpperCase();
-      const code = `ILOVEJ${tier}-${suffix}`;
-      stmts.push({
+      let code: string;
+      do {
+        const suffix = randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+        code = `ILOVEJ${tier}-${suffix}`;
+      } while (seenCodes.has(code));
+      seenCodes.add(code);
+      voucherStmts.push({
         sql: "INSERT INTO vouchers (voucher_id, campaign_id, discount_tier, discount_code, status) VALUES (?, ?, ?, ?, 'available')",
         args: [randomUUID(), "ilovej_meta_test", tier, code],
       });
     }
   }
 
-  // Batch in chunks of 200 to stay well within limits
-  for (let i = 0; i < stmts.length; i += 200) {
-    await db.batch(stmts.slice(i, i + 200), "write");
+  // Seed the campaign and all vouchers atomically: if anything fails, nothing is
+  // committed, so we never end up with a campaign row but missing vouchers
+  // (which would make every future run skip re-seeding).
+  const tx = await db.transaction("write");
+  try {
+    await tx.execute({
+      sql: `INSERT INTO campaigns (campaign_id, campaign_name, start_date, end_date, total_voucher_limit, status, source_channel)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        "ilovej_meta_test",
+        "iLoveJ Comment-to-DM Voucher Campaign",
+        now.toISOString().split("T")[0],
+        end.toISOString().split("T")[0],
+        1000,
+        "active",
+        "meta",
+      ],
+    });
+    for (const stmt of voucherStmts) {
+      await tx.execute(stmt);
+    }
+    await tx.commit();
+  } catch (err) {
+    await tx.rollback();
+    throw err;
   }
 }
 

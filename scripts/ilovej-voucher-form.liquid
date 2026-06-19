@@ -1,0 +1,147 @@
+<div class="page-width" style="padding: 40px 20px; text-align: center;">
+  <div style="max-width: 480px; margin: 0 auto; text-align: left;">
+
+    <form id="ilovej-form" novalidate>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display:block; font-size:14px; font-weight:600; margin-bottom:6px;">
+          Mobile Number <span style="color:#e00;">*</span>
+        </label>
+        <input type="tel" id="ilovej-phone"
+          placeholder="09171234567 or +639171234567"
+          autocomplete="tel" inputmode="tel"
+          style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:15px; box-sizing:border-box;" />
+        <div style="font-size:12px; color:#888; margin-top:4px;">Philippine mobile numbers only (Globe, Smart, DITO)</div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:14px; font-weight:600; margin-bottom:6px;">Name <span style="font-weight:400; color:#888;">(optional)</span></label>
+        <input type="text" id="ilovej-name" placeholder="Your name" autocomplete="name"
+          style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:15px; box-sizing:border-box;" />
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:14px; font-weight:600; margin-bottom:6px;">Email <span style="font-weight:400; color:#888;">(optional)</span></label>
+        <input type="email" id="ilovej-email" placeholder="your@email.com" autocomplete="email"
+          style="width:100%; padding:12px; border:1px solid #ddd; border-radius:6px; font-size:15px; box-sizing:border-box;" />
+      </div>
+
+      <div style="margin-bottom:12px; display:flex; gap:10px; align-items:flex-start;">
+        <input type="checkbox" id="ilovej-consent-sms" style="margin-top:3px; flex-shrink:0; width:16px; height:16px; cursor:pointer;" />
+        <label for="ilovej-consent-sms" style="font-size:13px; cursor:pointer; line-height:1.4;">
+          I agree to receive my iLoveJ voucher and campaign confirmation by SMS. <span style="color:#e00;">*</span>
+        </label>
+      </div>
+
+      <div style="margin-bottom:20px; display:flex; gap:10px; align-items:flex-start;">
+        <input type="checkbox" id="ilovej-consent-mkt" style="margin-top:3px; flex-shrink:0; width:16px; height:16px; cursor:pointer;" />
+        <label for="ilovej-consent-mkt" style="font-size:13px; cursor:pointer; line-height:1.4;">
+          I agree to receive future promotional offers from iLoveJ. (optional)
+        </label>
+      </div>
+
+      <div id="ilovej-msg" style="display:none; padding:14px; border-radius:8px; margin-bottom:16px; font-size:15px; font-weight:600; text-align:center;"></div>
+
+      <button type="submit" id="ilovej-btn"
+        style="width:100%; padding:14px; background:#000; color:#fff; border:none; border-radius:6px; font-size:16px; font-weight:600; cursor:pointer;">
+        Claim My Voucher
+      </button>
+
+      <p style="font-size:12px; color:#888; margin-top:12px; text-align:center;">
+        One voucher per customer &bull; Limited quantities only
+      </p>
+
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const API = "https://ilovej-campaign.vercel.app/api/voucher/claim";
+
+  const form    = document.getElementById("ilovej-form");
+  const phoneEl = document.getElementById("ilovej-phone");
+  const nameEl  = document.getElementById("ilovej-name");
+  const emailEl = document.getElementById("ilovej-email");
+  const cSms    = document.getElementById("ilovej-consent-sms");
+  const cMkt    = document.getElementById("ilovej-consent-mkt");
+  const btn     = document.getElementById("ilovej-btn");
+  const msg     = document.getElementById("ilovej-msg");
+
+  function show(html, err) {
+    msg.innerHTML = html;
+    msg.style.display = "block";
+    msg.style.background = err ? "#ffeaea" : "#eaffea";
+    msg.style.color      = err ? "#b00020" : "#1a5c2a";
+    msg.style.border     = err ? "1px solid #f5c2c2" : "1px solid #a8d5b0";
+  }
+
+  function normalize(raw) {
+    const v = raw.trim().replace(/[\s\-().]/g, "");
+    if (/^\+639\d{9}$/.test(v)) return v;
+    if (/^09\d{9}$/.test(v))    return "+63" + v.slice(1);
+    if (/^639\d{9}$/.test(v))   return "+" + v;
+    if (/^9\d{9}$/.test(v))     return "+63" + v;
+    return null;
+  }
+
+  function utm(k) { return new URLSearchParams(location.search).get(k) || undefined; }
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    if (!cSms.checked) { show("❌ Please agree to receive your voucher by SMS to continue.", true); return; }
+
+    const phone = normalize(phoneEl.value);
+    if (!phone) { show("❌ Please enter a valid Philippine mobile number (e.g. 09171234567).", true); return; }
+
+    btn.disabled = true;
+    btn.textContent = "Processing…";
+    msg.style.display = "none";
+
+    try {
+      const res  = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          name:  nameEl.value  || undefined,
+          email: emailEl.value || undefined,
+          campaign_id: "ilovej_meta_test",
+          consent_voucher_sms: true,
+          consent_marketing: cMkt.checked,
+          utm_source:   utm("utm_source")   || "shopify",
+          utm_medium:   utm("utm_medium"),
+          utm_campaign: utm("utm_campaign"),
+        }),
+      });
+      const data = await res.json();
+
+      if (data.already_claimed) {
+        show("✅ This number already has a voucher — check your SMS inbox!", false);
+      } else if (!data.success) {
+        show("❌ " + (data.error || "Something went wrong. Please try again."), true);
+      } else {
+        show(data.sms_sent
+          ? `🎉 You got <strong>${data.discount_tier}% OFF</strong>! Your voucher code was sent to your mobile via SMS.`
+          : "✅ Voucher claimed! If you don't receive an SMS within a few minutes, please contact support.",
+          false);
+        form.reset();
+      }
+    } catch {
+      show("❌ Network error. Please check your connection and try again.", true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Claim My Voucher";
+    }
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "iLoveJ Voucher Form",
+  "settings": [],
+  "presets": [{ "name": "iLoveJ Voucher Form" }]
+}
+{% endschema %}
