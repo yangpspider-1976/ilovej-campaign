@@ -1,17 +1,34 @@
 {%- comment -%}
   iLoveJ voucher claim form. Self-contained section that owns the form and posts
-  directly to the campaign API. Uses intl-tel-input (the same library behind the
-  original Shopify Forms phone field) for the flag + country dropdown, and is
-  sized to match the original Forms block.
+  directly to the campaign API. Fully self-contained (no external CDN/fonts):
+  inline SVG PH flag, static +63 prefix, sized to match the original Forms block.
 {%- endcomment -%}
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
 
 <div class="ij-section page-width">
   <form id="ilovej-form" class="ij-form" novalidate>
 
-    <input type="tel" id="ilovej-phone" name="phone" class="ij-input ij-phone"
-      autocomplete="tel" inputmode="tel" />
+    <div class="ij-phone-row">
+      <div class="ij-flag" aria-hidden="true">
+        <svg class="ij-flag-svg" viewBox="0 0 32 16" width="26" height="13" role="img" aria-label="Philippines">
+          <rect width="32" height="8" fill="#0038A8"></rect>
+          <rect y="8" width="32" height="8" fill="#CE1126"></rect>
+          <polygon points="0,0 0,16 13.86,8" fill="#FFFFFF"></polygon>
+          <circle cx="4.6" cy="8" r="1.9" fill="#FCD116"></circle>
+          <circle cx="1.9" cy="2" r="0.7" fill="#FCD116"></circle>
+          <circle cx="1.9" cy="14" r="0.7" fill="#FCD116"></circle>
+          <circle cx="11.2" cy="8" r="0.7" fill="#FCD116"></circle>
+        </svg>
+        <span class="ij-caret">▾</span>
+      </div>
+      <div class="ij-phone-box">
+        <span class="ij-phone-label">Phone</span>
+        <div class="ij-phone-inputwrap">
+          <span class="ij-dial">+63</span>
+          <input type="tel" id="ilovej-phone" name="phone"
+            inputmode="numeric" maxlength="11" placeholder="912 345 6789" autocomplete="tel" />
+        </div>
+      </div>
+    </div>
 
     <input type="text" id="ilovej-name" name="name" class="ij-input" placeholder="Name" autocomplete="name" />
 
@@ -38,12 +55,53 @@
 <style>
   .ij-section { padding: 0 20px 52px; }
   .ij-form {
-    max-width: 500px;
+    max-width: 446px;
     margin: 0 auto;
     font-family: inherit;
     color: #1a1a1a;
     text-align: left;
+    /* Theme may set font-synthesis:none; re-enable so bold actually renders. */
+    font-synthesis: weight;
+    -webkit-font-synthesis: weight;
   }
+
+  /* Phone row: flag selector + phone box */
+  .ij-phone-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .ij-flag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 60px;
+    border: 1px solid #e3e3e3;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .ij-flag-svg { border-radius: 2px; display: block; }
+  .ij-caret { font-size: 10px; color: #555; }
+  .ij-phone-box {
+    flex: 1;
+    border: 1px solid #e3e3e3;
+    border-radius: 6px;
+    background: #fff;
+    padding: 6px 14px;
+  }
+  .ij-phone-label { display: block; font-size: 12px; color: #9b9b9b; line-height: 1.2; }
+  .ij-phone-inputwrap { display: flex; align-items: center; gap: 5px; }
+  .ij-dial { font-size: 15px; color: #1a1a1a; }
+  .ij-phone-box input {
+    flex: 1;
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 0;
+    font-size: 15px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: transparent;
+  }
+
+  /* Standard inputs */
   .ij-input {
     width: 100%;
     box-sizing: border-box;
@@ -58,24 +116,25 @@
     background: #fff;
   }
   .ij-form input::placeholder { color: #9b9b9b; }
-  .ij-form input:focus { outline: none; border-color: #1a1a1a; }
+  .ij-form input:focus { outline: none; }
+  .ij-input:focus { border-color: #1a1a1a; }
+  .ij-phone-box:focus-within { border-color: #1a1a1a; }
 
-  /* Make intl-tel-input span the full width and inherit our input styling */
-  .ij-form .iti { display: block; width: 100%; }
-  .ij-form .iti .ij-phone { padding-left: 52px; }
-
-  .ij-consent-head { font-size: 14px; font-weight: 600; margin: 2px 0 8px; }
+  /* Consent — force bold explicitly */
+  .ij-consent-head { font-size: 14px; font-weight: 700; margin: 2px 0 8px; }
   .ij-check {
     display: flex;
     gap: 9px;
     align-items: flex-start;
     font-size: 14px;
+    font-weight: 400;
     margin-bottom: 14px;
     cursor: pointer;
     line-height: 1.4;
   }
   .ij-check input { margin: 1px 0 0; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; }
 
+  /* Button */
   .ij-btn {
     width: 100%;
     padding: 13px;
@@ -102,7 +161,6 @@
   }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
 <script>
 (function () {
   const API = "https://ilovej-campaign.vercel.app/api/voucher/claim";
@@ -116,17 +174,6 @@
   const btn     = document.getElementById("ilovej-btn");
   const msg     = document.getElementById("ilovej-msg");
 
-  // Initialise the flag/country dropdown (same library as the original form).
-  let iti = null;
-  if (window.intlTelInput) {
-    iti = window.intlTelInput(phoneEl, {
-      initialCountry: "ph",
-      preferredCountries: ["ph"],
-      separateDialCode: true,
-      utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
-    });
-  }
-
   function show(html, err) {
     msg.innerHTML = html;
     msg.style.display = "block";
@@ -135,23 +182,13 @@
     msg.style.border     = err ? "1px solid #f3c2c2" : "1px solid #a9dcb8";
   }
 
-  // Fallback normaliser if the library/utils didn't load.
-  function normalize(raw) {
-    let v = (raw || "").trim().replace(/[\s\-().]/g, "");
-    if (/^\+639\d{9}$/.test(v)) return v;
-    if (/^09\d{9}$/.test(v))    return "+63" + v.slice(1);
-    if (/^639\d{9}$/.test(v))   return "+" + v;
-    if (/^9\d{9}$/.test(v))     return "+63" + v;
-    return null;
-  }
-
+  // The +63 is shown as a fixed prefix; the user types the national number.
   function getPhone() {
-    if (iti && typeof iti.getNumber === "function") {
-      const num = iti.getNumber();              // E.164, e.g. +639171234567
-      if (num && (typeof iti.isValidNumber !== "function" || iti.isValidNumber())) return num;
-      return null;
-    }
-    return normalize(phoneEl.value);
+    let d = (phoneEl.value || "").replace(/\D/g, "");
+    if (d.startsWith("63")) d = d.slice(2);   // in case they paste with 63
+    if (d.startsWith("0"))  d = d.slice(1);    // strip a leading 0 (09xx)
+    if (!/^9\d{9}$/.test(d)) return null;      // PH mobile: 9XXXXXXXXX
+    return "+63" + d;
   }
 
   function utm(k) { return new URLSearchParams(location.search).get(k) || undefined; }
@@ -162,7 +199,7 @@
     if (!cSms.checked) { show("Please tick the consent box to continue.", true); return; }
 
     const phone = getPhone();
-    if (!phone) { show("Please enter a valid mobile number.", true); return; }
+    if (!phone) { show("Please enter a valid Philippine mobile number (e.g. 912 345 6789).", true); return; }
 
     btn.disabled = true;
     btn.textContent = "Processing…";
@@ -196,7 +233,6 @@
           : "Voucher claimed! If you don't receive an SMS within a few minutes, please contact support.",
           false);
         form.reset();
-        if (iti) iti.setCountry("ph");
       }
     } catch (err) {
       show("Network error. Please check your connection and try again.", true);
