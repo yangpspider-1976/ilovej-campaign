@@ -44,7 +44,7 @@ export async function sendSms(phone: string, message: string): Promise<SmsResult
 }
 
 // ─── Movider (Philippines) ───────────────────────────────────────────────────
-// Docs: https://movider.net/documentation
+// Docs: https://developer.movider.co
 // Env vars:
 //   SMS_API_KEY    = your Movider API key
 //   SMS_API_SECRET = your Movider API secret
@@ -78,7 +78,7 @@ async function sendViaMovider(phone: string, message: string): Promise<SmsResult
   });
 
   try {
-    const res = await fetch("https://api.movider.net/v1/sms", {
+    const res = await fetch("https://api.movider.co/v1/sms", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body,
