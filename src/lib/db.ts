@@ -119,17 +119,42 @@ async function initSchema(): Promise<void> {
   `);
 }
 
+const TOTAL_VOUCHERS = 1000;
+
 async function seedDefaultCampaign(): Promise<void> {
   const db = getDb();
-  const existing = await db.execute({
-    sql: "SELECT campaign_id FROM campaigns WHERE campaign_id = ?",
-    args: ["ilovej_meta_test"],
-  });
-  if (existing.rows.length > 0) return;
 
   const now = new Date();
   const end = new Date(now);
   end.setDate(end.getDate() + 14);
+
+  // Ensure the campaign row exists FIRST -- vouchers have a foreign key on
+  // campaign_id, so it must be present before any voucher can be inserted.
+  // INSERT OR IGNORE makes this idempotent across cold starts / retries.
+  await db.execute({
+    sql: `INSERT OR IGNORE INTO campaigns (campaign_id, campaign_name, start_date, end_date, total_voucher_limit, status, source_channel)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      "ilovej_meta_test",
+      "iLoveJ Comment-to-DM Voucher Campaign",
+      now.toISOString().split("T")[0],
+      end.toISOString().split("T")[0],
+      TOTAL_VOUCHERS,
+      "active",
+      "meta",
+    ],
+  });
+
+  // Gate seeding on the actual voucher count, NOT merely the campaign's
+  // existence. This makes the seed self-healing: a previous run that inserted
+  // the campaign but was interrupted before finishing the vouchers leaves an
+  // incomplete count here, so we clear and re-seed instead of getting stuck.
+  const countRes = await db.execute({
+    sql: "SELECT COUNT(*) AS c FROM vouchers WHERE campaign_id = ?",
+    args: ["ilovej_meta_test"],
+  });
+  const voucherCount = Number(countRes.rows[0].c);
+  if (voucherCount >= TOTAL_VOUCHERS) return;
 
   // Seed 1,000 vouchers: 30%×600, 40%×250, 50%×100, 70%×40, 90%×10
   const tiers = [
@@ -159,31 +184,20 @@ async function seedDefaultCampaign(): Promise<void> {
     }
   }
 
-  // Seed the campaign and all vouchers atomically: if anything fails, nothing is
-  // committed, so we never end up with a campaign row but missing vouchers
-  // (which would make every future run skip re-seeding).
-  const tx = await db.transaction("write");
-  try {
-    await tx.execute({
-      sql: `INSERT INTO campaigns (campaign_id, campaign_name, start_date, end_date, total_voucher_limit, status, source_channel)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        "ilovej_meta_test",
-        "iLoveJ Comment-to-DM Voucher Campaign",
-        now.toISOString().split("T")[0],
-        end.toISOString().split("T")[0],
-        1000,
-        "active",
-        "meta",
-      ],
+  // Clear any vouchers left behind by a previously interrupted seed, so a retry
+  // produces exactly 1,000 rather than stacking duplicates on top.
+  if (voucherCount > 0) {
+    await db.execute({
+      sql: "DELETE FROM vouchers WHERE campaign_id = ?",
+      args: ["ilovej_meta_test"],
     });
-    for (const stmt of voucherStmts) {
-      await tx.execute(stmt);
-    }
-    await tx.commit();
-  } catch (err) {
-    await tx.rollback();
-    throw err;
+  }
+
+  // Insert the vouchers in batches of 200. Each db.batch("write") is atomic and
+  // a single network round-trip, so all 1,000 seed in ~5 round-trips -- fast
+  // enough for serverless, unlike 1,000 sequential executes (which timed out).
+  for (let i = 0; i < voucherStmts.length; i += 200) {
+    await db.batch(voucherStmts.slice(i, i + 200), "write");
   }
 }
 
