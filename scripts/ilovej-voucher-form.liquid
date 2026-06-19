@@ -49,6 +49,13 @@
 
     <button type="submit" id="ilovej-btn" class="ij-btn">Claim My Voucher</button>
   </form>
+
+  <div id="ilovej-success" class="ij-success" role="status" aria-live="polite">
+    <p class="ij-success-title">Success</p>
+    <p>Thank you for joining!</p>
+    <p>Check your phone message inbox to claim your voucher!</p>
+    <p>Note: voucher codes should arrive in your inbox within 24 hours</p>
+  </div>
 </div>
 
 <style>
@@ -110,11 +117,13 @@
     background: #fff;
   }
   .ij-form input::placeholder { color: #9b9b9b; }
-  .ij-form input:focus { outline: none; }
-  .ij-input:focus { border-color: #1a1a1a; }
-  .ij-phone-box:focus-within { border-color: #1a1a1a; }
+  /* Remove the browser's own focus ring so we don't get a doubled box inside
+     the phone field; we draw a single blue border on the wrapper instead. */
+  .ij-form input:focus { outline: none; box-shadow: none; }
+  .ij-input:focus { border-color: #1878B9; }
+  .ij-phone-box:focus-within { border-color: #1878B9; }
 
-  /* Consent — force bold explicitly */
+  /* Consent */
   .ij-consent-head { font-size: 14px; font-weight: 400; margin: 2px 0 8px; }
   .ij-check {
     display: flex;
@@ -153,6 +162,24 @@
     font-size: 14px;
     font-weight: 600;
   }
+
+  /* Success state (shown in place of the form) */
+  .ij-success {
+    display: none;
+    max-width: 446px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: inherit;
+    color: #1a1a1a;
+  }
+  .ij-success p { margin: 0 0 6px; font-size: 15px; line-height: 1.5; }
+  .ij-success-title {
+    /* Use the theme's heading font so "Success" renders bold like page headings */
+    font-family: var(--font-heading-family, inherit);
+    font-weight: var(--font-heading-weight, 700);
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
 </style>
 
 <script>
@@ -167,6 +194,7 @@
   const cMkt    = document.getElementById("ilovej-consent-mkt");
   const btn     = document.getElementById("ilovej-btn");
   const msg     = document.getElementById("ilovej-msg");
+  const success = document.getElementById("ilovej-success");
 
   function show(html, err) {
     msg.innerHTML = html;
@@ -222,11 +250,10 @@
       } else if (!data.success) {
         show(data.error || "Something went wrong. Please try again.", true);
       } else {
-        show(data.sms_sent
-          ? "🎉 You got <strong>" + data.discount_tier + "% OFF</strong>! Your voucher code was sent to your mobile via SMS."
-          : "Voucher claimed! If you don't receive an SMS within a few minutes, please contact support.",
-          false);
-        form.reset();
+        // Success: replace the form with the success message (matches original).
+        form.style.display = "none";
+        success.style.display = "block";
+        success.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     } catch (err) {
       show("Network error. Please check your connection and try again.", true);
