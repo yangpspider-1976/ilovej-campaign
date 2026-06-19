@@ -1,24 +1,17 @@
 {%- comment -%}
   iLoveJ voucher claim form. Self-contained section that owns the form and posts
-  directly to the campaign API. Styled to match the original Shopify Forms block
-  1:1 (flag + "+63" phone field, placeholder-only name/email, two consent
-  headings with checkboxes, full-width black button).
+  directly to the campaign API. Uses intl-tel-input (the same library behind the
+  original Shopify Forms phone field) for the flag + country dropdown, and is
+  sized to match the original Forms block.
 {%- endcomment -%}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
 
 <div class="ij-section page-width">
   <form id="ilovej-form" class="ij-form" novalidate>
 
-    <div class="ij-phone-row">
-      <div class="ij-flag" aria-hidden="true">
-        <span class="ij-flag-emoji">🇵🇭</span>
-        <span class="ij-caret">▾</span>
-      </div>
-      <div class="ij-phone-box">
-        <span class="ij-phone-label">Phone</span>
-        <input type="tel" id="ilovej-phone" name="phone"
-          value="+63" autocomplete="tel" inputmode="tel" />
-      </div>
-    </div>
+    <input type="tel" id="ilovej-phone" name="phone" class="ij-input ij-phone"
+      autocomplete="tel" inputmode="tel" />
 
     <input type="text" id="ilovej-name" name="name" class="ij-input" placeholder="Name" autocomplete="name" />
 
@@ -45,85 +38,52 @@
 <style>
   .ij-section { padding: 0 20px 52px; }
   .ij-form {
-    max-width: 600px;
+    max-width: 500px;
     margin: 0 auto;
     font-family: inherit;
     color: #1a1a1a;
     text-align: left;
   }
-
-  /* Phone row: flag selector + phone box, side by side */
-  .ij-phone-row { display: flex; gap: 12px; margin-bottom: 16px; }
-  .ij-flag {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 78px;
-    border: 1px solid #e1e1e1;
-    border-radius: 8px;
-    background: #fff;
-  }
-  .ij-flag-emoji { font-size: 20px; line-height: 1; }
-  .ij-caret { font-size: 11px; color: #555; }
-  .ij-phone-box {
-    flex: 1;
-    border: 1px solid #e1e1e1;
-    border-radius: 8px;
-    background: #fff;
-    padding: 8px 16px;
-  }
-  .ij-phone-label { display: block; font-size: 12px; color: #9b9b9b; margin-bottom: 2px; }
-  .ij-phone-box input {
-    width: 100%;
-    border: none;
-    outline: none;
-    padding: 0;
-    font-size: 16px;
-    font-family: inherit;
-    color: #1a1a1a;
-    background: transparent;
-  }
-
-  /* Standard inputs */
   .ij-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 16px;
-    margin-bottom: 16px;
-    border: 1px solid #e1e1e1;
-    border-radius: 8px;
-    font-size: 16px;
+    padding: 11px 14px;
+    margin-bottom: 14px;
+    border: 1px solid #e3e3e3;
+    border-radius: 6px;
+    font-size: 15px;
+    line-height: 1.3;
     font-family: inherit;
     color: #1a1a1a;
     background: #fff;
   }
   .ij-form input::placeholder { color: #9b9b9b; }
   .ij-form input:focus { outline: none; border-color: #1a1a1a; }
-  .ij-phone-box:focus-within { border-color: #1a1a1a; }
 
-  /* Consent */
-  .ij-consent-head { font-size: 16px; font-weight: 600; margin: 4px 0 10px; }
+  /* Make intl-tel-input span the full width and inherit our input styling */
+  .ij-form .iti { display: block; width: 100%; }
+  .ij-form .iti .ij-phone { padding-left: 52px; }
+
+  .ij-consent-head { font-size: 14px; font-weight: 600; margin: 2px 0 8px; }
   .ij-check {
     display: flex;
-    gap: 10px;
+    gap: 9px;
     align-items: flex-start;
-    font-size: 16px;
-    margin-bottom: 18px;
+    font-size: 14px;
+    margin-bottom: 14px;
     cursor: pointer;
     line-height: 1.4;
   }
-  .ij-check input { margin: 2px 0 0; flex-shrink: 0; width: 18px; height: 18px; cursor: pointer; }
+  .ij-check input { margin: 1px 0 0; flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; }
 
-  /* Button */
   .ij-btn {
     width: 100%;
-    padding: 17px;
+    padding: 13px;
     background: #1c1c1c;
     color: #fff;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 6px;
+    font-size: 15px;
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
@@ -132,17 +92,17 @@
   .ij-btn:hover { opacity: .88; }
   .ij-btn:disabled { opacity: .55; cursor: default; }
 
-  /* Inline result message */
   .ij-msg {
     display: none;
-    padding: 14px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    font-size: 15px;
+    padding: 13px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    font-size: 14px;
     font-weight: 600;
   }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
 <script>
 (function () {
   const API = "https://ilovej-campaign.vercel.app/api/voucher/claim";
@@ -156,10 +116,16 @@
   const btn     = document.getElementById("ilovej-btn");
   const msg     = document.getElementById("ilovej-msg");
 
-  // Keep the "+63" prefix from being deleted accidentally.
-  phoneEl.addEventListener("focus", function () {
-    if (!phoneEl.value) phoneEl.value = "+63";
-  });
+  // Initialise the flag/country dropdown (same library as the original form).
+  let iti = null;
+  if (window.intlTelInput) {
+    iti = window.intlTelInput(phoneEl, {
+      initialCountry: "ph",
+      preferredCountries: ["ph"],
+      separateDialCode: true,
+      utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
+    });
+  }
 
   function show(html, err) {
     msg.innerHTML = html;
@@ -169,14 +135,23 @@
     msg.style.border     = err ? "1px solid #f3c2c2" : "1px solid #a9dcb8";
   }
 
+  // Fallback normaliser if the library/utils didn't load.
   function normalize(raw) {
     let v = (raw || "").trim().replace(/[\s\-().]/g, "");
     if (/^\+639\d{9}$/.test(v)) return v;
-    if (/^\+6309\d{9}$/.test(v)) return "+63" + v.slice(4);   // "+630917..." -> drop the 0
     if (/^09\d{9}$/.test(v))    return "+63" + v.slice(1);
     if (/^639\d{9}$/.test(v))   return "+" + v;
     if (/^9\d{9}$/.test(v))     return "+63" + v;
     return null;
+  }
+
+  function getPhone() {
+    if (iti && typeof iti.getNumber === "function") {
+      const num = iti.getNumber();              // E.164, e.g. +639171234567
+      if (num && (typeof iti.isValidNumber !== "function" || iti.isValidNumber())) return num;
+      return null;
+    }
+    return normalize(phoneEl.value);
   }
 
   function utm(k) { return new URLSearchParams(location.search).get(k) || undefined; }
@@ -186,8 +161,8 @@
 
     if (!cSms.checked) { show("Please tick the consent box to continue.", true); return; }
 
-    const phone = normalize(phoneEl.value);
-    if (!phone) { show("Please enter a valid Philippine mobile number (e.g. 09171234567).", true); return; }
+    const phone = getPhone();
+    if (!phone) { show("Please enter a valid mobile number.", true); return; }
 
     btn.disabled = true;
     btn.textContent = "Processing…";
@@ -221,6 +196,7 @@
           : "Voucher claimed! If you don't receive an SMS within a few minutes, please contact support.",
           false);
         form.reset();
+        if (iti) iti.setCountry("ph");
       }
     } catch (err) {
       show("Network error. Please check your connection and try again.", true);
