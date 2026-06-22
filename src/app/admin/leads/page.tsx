@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { listLeads, getVoucherByLeadId, type Voucher } from "@/lib/db";
 import { maskPhone } from "@/lib/phone";
+import { formatDateTimePH } from "@/lib/datetime";
 
 const CAMPAIGN_ID = "ilovej_meta_test";
 
@@ -83,10 +84,7 @@ export default async function LeadsPage() {
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>{lead.utm_source ?? "—"}</td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>{lead.utm_campaign ?? "—"}</td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>
-                      {new Date(lead.created_at).toLocaleString("en-PH", {
-                        month: "short", day: "numeric",
-                        hour: "2-digit", minute: "2-digit",
-                      })}
+                      {formatDateTimePH(lead.created_at)}
                     </td>
                   </tr>
                 ))

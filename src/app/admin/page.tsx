@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { getCampaignSummary, getTierCounts, listLeads, getCampaign } from "@/lib/db";
+import { formatDateTimePH } from "@/lib/datetime";
 
 const CAMPAIGN_ID = "ilovej_meta_test";
 
@@ -208,7 +209,7 @@ export default async function AdminDashboard() {
                         <BadgeStatus status={lead.utm_source ?? "direct"} />
                       </td>
                       <td style={{ color: "var(--muted)", fontSize: 13 }}>
-                        {new Date(lead.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        {formatDateTimePH(lead.created_at)}
                       </td>
                     </tr>
                   ))

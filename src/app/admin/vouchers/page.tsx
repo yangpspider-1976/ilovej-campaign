@@ -2,6 +2,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { listVouchers, getTierCounts } from "@/lib/db";
+import { formatDateTimePH, formatDatePH } from "@/lib/datetime";
 
 const CAMPAIGN_ID = "ilovej_meta_test";
 
@@ -102,14 +103,10 @@ export default async function VouchersPage() {
                       <span className={`badge ${STATUS_CLASS[v.status] ?? ""}`}>{v.status}</span>
                     </td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>
-                      {v.assigned_at
-                        ? new Date(v.assigned_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
-                        : "—"}
+                      {formatDateTimePH(v.assigned_at)}
                     </td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>
-                      {v.expires_at
-                        ? new Date(v.expires_at).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric" })
-                        : "—"}
+                      {formatDatePH(v.expires_at)}
                     </td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>
                       {v.shopify_order_id ?? "—"}
