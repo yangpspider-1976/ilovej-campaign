@@ -45,9 +45,23 @@
       <span>I agree to receive marketing emails from I LOVE J.</span>
     </label>
 
+    <p class="ij-privacy">
+      Your mobile number will be used to issue and deliver your voucher, prevent
+      duplicate claims, and track campaign performance. Your information will be
+      processed according to our
+      <a href="/policies/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.
+    </p>
+
     <div id="ilovej-msg" class="ij-msg" role="status" aria-live="polite"></div>
 
     <button type="submit" id="ilovej-btn" class="ij-btn">Claim My Voucher</button>
+
+    <p class="ij-legal">
+      By claiming, you agree to our
+      <a href="/policies/terms-of-service" target="_blank" rel="noopener">Terms</a>
+      and
+      <a href="/policies/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.
+    </p>
   </form>
 
   <div id="ilovej-success" class="ij-success" role="status" aria-live="polite">
@@ -55,6 +69,8 @@
     <p>Thank you for joining!</p>
     <p>Check your phone message inbox to claim your voucher!</p>
     <p>Note: voucher codes should arrive in your inbox within 24 hours</p>
+    <a href="https://ilovej.store/collections/all" class="ij-shop-btn">Shop Now</a>
+    <p class="ij-success-support">Didn't get your SMS? Message us and we'll check your voucher status.</p>
   </div>
 </div>
 
@@ -163,6 +179,21 @@
     font-weight: 600;
   }
 
+  /* Privacy notice + legal links */
+  .ij-privacy {
+    font-size: 12px;
+    color: #9b9b9b;
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+  .ij-legal {
+    font-size: 12px;
+    color: #9b9b9b;
+    text-align: center;
+    margin: 12px 0 0;
+  }
+  .ij-privacy a, .ij-legal a { color: #1878B9; text-decoration: underline; }
+
   /* Success state (shown in place of the form) */
   .ij-success {
     display: none;
@@ -180,6 +211,19 @@
     font-size: 20px;
     margin-bottom: 12px;
   }
+  .ij-shop-btn {
+    display: inline-block;
+    margin: 18px 0 0;
+    padding: 13px 28px;
+    background: #1c1c1c;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 15px;
+    text-decoration: none;
+    transition: opacity .15s ease;
+  }
+  .ij-shop-btn:hover { opacity: .88; color: #fff; }
+  .ij-success-support { font-size: 12px; color: #9b9b9b; margin-top: 14px; }
 </style>
 
 <script>

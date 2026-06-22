@@ -6,6 +6,10 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "https://ilovej.store")
   .split(",")
   .map(o => o.trim());
 
+// Bump when the privacy policy text changes, so each lead records which version
+// they consented to.
+const PRIVACY_POLICY_VERSION = "2026-06-22";
+
 function corsHeaders(origin: string | null) {
   const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
@@ -173,6 +177,8 @@ export async function POST(req: NextRequest) {
     utm_term: utm_term ?? null,
     consent_voucher_sms: consent_voucher_sms ? 1 : 0,
     consent_marketing: consent_marketing ? 1 : 0,
+    consent_at: new Date().toISOString(),
+    privacy_policy_version: PRIVACY_POLICY_VERSION,
     ip_address: ip,
     user_agent: req.headers.get("user-agent") ?? null,
   });

@@ -55,6 +55,8 @@ async function initSchema(): Promise<void> {
       utm_term TEXT,
       consent_voucher_sms INTEGER DEFAULT 0,
       consent_marketing INTEGER DEFAULT 0,
+      consent_at TEXT,
+      privacy_policy_version TEXT,
       ip_address TEXT,
       user_agent TEXT,
       created_at TEXT DEFAULT (datetime('now')),
@@ -117,6 +119,22 @@ async function initSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_events_lead ON events(lead_id);
     CREATE INDEX IF NOT EXISTS idx_events_campaign ON events(campaign_id);
   `);
+
+  await migrateLeadConsentColumns();
+}
+
+// Add consent-audit columns to leads if an older DB predates them. SQLite has no
+// "ADD COLUMN IF NOT EXISTS", so we check the table info first.
+async function migrateLeadConsentColumns(): Promise<void> {
+  const db = getDb();
+  const info = await db.execute("PRAGMA table_info(leads)");
+  const cols = new Set(info.rows.map(r => String((r as Record<string, Val>).name)));
+  if (!cols.has("consent_at")) {
+    await db.execute("ALTER TABLE leads ADD COLUMN consent_at TEXT");
+  }
+  if (!cols.has("privacy_policy_version")) {
+    await db.execute("ALTER TABLE leads ADD COLUMN privacy_policy_version TEXT");
+  }
 }
 
 const TOTAL_VOUCHERS = 1000;
@@ -248,6 +266,8 @@ export interface Lead {
   utm_term: string | null;
   consent_voucher_sms: number;
   consent_marketing: number;
+  consent_at: string | null;
+  privacy_policy_version: string | null;
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
@@ -340,6 +360,8 @@ function rowToLead(r: Record<string, Val>): Lead {
     utm_term: ns(r.utm_term),
     consent_voucher_sms: n(r.consent_voucher_sms),
     consent_marketing: n(r.consent_marketing),
+    consent_at: ns(r.consent_at),
+    privacy_policy_version: ns(r.privacy_policy_version),
     ip_address: ns(r.ip_address),
     user_agent: ns(r.user_agent),
     created_at: s(r.created_at),
@@ -413,13 +435,14 @@ export async function createLead(data: Omit<Lead, "lead_id" | "created_at">): Pr
   await getDb().execute({
     sql: `INSERT INTO leads (lead_id, campaign_id, name, phone_raw, phone_normalized, email, meta_user_id,
             source, utm_source, utm_medium, utm_campaign, utm_content, utm_term,
-            consent_voucher_sms, consent_marketing, ip_address, user_agent)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            consent_voucher_sms, consent_marketing, consent_at, privacy_policy_version, ip_address, user_agent)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       leadId, data.campaign_id, data.name, data.phone_raw, data.phone_normalized,
       data.email, data.meta_user_id, data.source, data.utm_source, data.utm_medium,
       data.utm_campaign, data.utm_content, data.utm_term,
       data.consent_voucher_sms ? 1 : 0, data.consent_marketing ? 1 : 0,
+      data.consent_at, data.privacy_policy_version,
       data.ip_address, data.user_agent,
     ],
   });
