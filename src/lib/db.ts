@@ -645,6 +645,44 @@ export async function logEvent(
   });
 }
 
+// ─── Admin: full reset ────────────────────────────────────────────────────────
+
+/**
+ * Wipe all campaign data (events, sms_logs, vouchers, leads, campaign) and
+ * re-seed a fresh 1,000-voucher inventory. Deletes in FK-safe order: every
+ * child reference must be removed before the row it points at.
+ */
+export async function resetCampaign(campaignId: string): Promise<{ vouchers: number }> {
+  await ensureReady();
+  const db = getDb();
+
+  // events, sms_logs and vouchers all reference leads, so clear them first.
+  await db.batch(
+    [
+      { sql: "DELETE FROM events WHERE campaign_id = ?", args: [campaignId] },
+      {
+        sql: "DELETE FROM sms_logs WHERE lead_id IN (SELECT lead_id FROM leads WHERE campaign_id = ?)",
+        args: [campaignId],
+      },
+      { sql: "DELETE FROM vouchers WHERE campaign_id = ?", args: [campaignId] },
+      { sql: "DELETE FROM leads WHERE campaign_id = ?", args: [campaignId] },
+      { sql: "DELETE FROM campaigns WHERE campaign_id = ?", args: [campaignId] },
+    ],
+    "write"
+  );
+
+  // Re-seed (seedDefaultCampaign only handles the default campaign id).
+  if (campaignId === "ilovej_meta_test") {
+    await seedDefaultCampaign();
+  }
+
+  const countRes = await db.execute({
+    sql: "SELECT COUNT(*) AS c FROM vouchers WHERE campaign_id = ?",
+    args: [campaignId],
+  });
+  return { vouchers: Number(countRes.rows[0].c) };
+}
+
 // ─── Dashboard Summary ────────────────────────────────────────────────────────
 
 export async function getCampaignSummary(campaignId: string): Promise<CampaignSummary> {
