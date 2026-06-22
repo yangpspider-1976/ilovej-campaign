@@ -244,9 +244,6 @@ export async function POST(req: NextRequest) {
         : "Voucher assigned but SMS delivery failed. Please contact support.",
       discount_tier: voucher.discount_tier,
       voucher_status: smsResult.success ? "sent" : "failed",
-      // Temporary diagnostic so SMS failures can be inspected without DB/log
-      // access. Safe to remove once SMS delivery is confirmed.
-      ...(smsResult.success ? {} : { sms_error: smsResult.error }),
     },
     { headers: cors }
   );
