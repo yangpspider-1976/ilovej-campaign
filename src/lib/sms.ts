@@ -11,23 +11,17 @@ export interface SmsResult {
 
 export function buildVoucherMessage(
   discountCode: string,
-  discountTier: number,
-  expiresAt: string,
-  shopifyUrl?: string
+  discountTier: number
 ): string {
-  const expiry = new Date(expiresAt).toLocaleDateString("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-
-  const base = `[iLoveJ] Your discount voucher is ready.\n\nCode: ${discountCode}\nDiscount: ${discountTier}% OFF\nValid until: ${expiry}\nOne-time use only.`;
-
-  if (shopifyUrl) {
-    return `${base}\n\nShop now: ${shopifyUrl}\nReply STOP to opt out.`;
-  }
-
-  return `${base}\n\nUse it at checkout on our Shopify store.`;
+  // No clickable URL on purpose ("Search ilovej.store on Google") — links can
+  // trigger SMS filtering / sender-ID scrutiny. Validity is a fixed 2 weeks,
+  // matching the expiry set when the voucher is assigned.
+  return (
+    `Thank you for joining ILOVEJ Rainy Giveaway!\n\n` +
+    `Search ilovej.store on Google and use this voucher code to get ${discountTier}% OFF discount on Premium Quality and Korean made children's clothes.\n\n` +
+    `VOUCHER CODE: ${discountCode}\n\n` +
+    `The voucher code is valid for 2 weeks only. Shop now!`
+  );
 }
 
 export async function sendSms(phone: string, message: string): Promise<SmsResult> {

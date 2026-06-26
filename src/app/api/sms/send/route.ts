@@ -26,13 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "No voucher assigned to this lead" }, { status: 404 });
   }
 
-  const shopifyUrl = process.env.SHOPIFY_STORE_URL;
-  const message = buildVoucherMessage(
-    voucher.discount_code,
-    voucher.discount_tier,
-    voucher.expires_at ?? new Date().toISOString(),
-    shopifyUrl
-  );
+  const message = buildVoucherMessage(voucher.discount_code, voucher.discount_tier);
 
   const smsLog = await createSmsLog({
     lead_id,

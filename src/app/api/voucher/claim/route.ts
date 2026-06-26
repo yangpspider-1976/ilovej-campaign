@@ -187,7 +187,8 @@ export async function POST(req: NextRequest) {
     utm_source, utm_campaign,
   });
 
-  const expiresAt = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  // Voucher valid for 2 weeks (matches the "valid for 2 weeks" line in the SMS).
+  const expiresAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
   const voucher = await assignVoucher(campaign_id, lead.lead_id, expiresAt);
   if (!voucher) {
@@ -203,13 +204,7 @@ export async function POST(req: NextRequest) {
     discount_tier: voucher.discount_tier,
   });
 
-  const shopifyUrl = process.env.SHOPIFY_STORE_URL;
-  const message = buildVoucherMessage(
-    voucher.discount_code,
-    voucher.discount_tier,
-    expiresAt,
-    shopifyUrl
-  );
+  const message = buildVoucherMessage(voucher.discount_code, voucher.discount_tier);
 
   const smsLog = await createSmsLog({
     lead_id: lead.lead_id,
