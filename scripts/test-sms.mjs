@@ -1,83 +1,136 @@
-// Test Movider SMS sending
-// Usage: node --env-file=.env.local scripts/test-sms.mjs <phone_number>
-// Example: node --env-file=.env.local scripts/test-sms.mjs 09171234567
+// Movider SMS diagnostic — send ONE controlled message and dump the FULL raw
+// response, so we can isolate WHY delivery differs between senders/messages.
+//
+// Usage (PowerShell or bash):
+//   node scripts/test-sms.mjs --to 09171234567 --from dASO  --text "test 123"
+//   node scripts/test-sms.mjs --to 09171234567 --from DemoP --text "test 123"
+//   node scripts/test-sms.mjs --to 09171234567 --from dASO  --voucher
+//
+// The point: change ONE thing at a time.
+//   1) Same short text, swap DemoP <-> dASO   -> tells you if the SENDER is the problem.
+//   2) Same dASO sender, --text vs --voucher  -> tells you if the CONTENT is the problem.
+//
+// Creds are read from .env.local (real env vars take precedence).
 
-const raw = process.argv[2];
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
-if (!raw) {
-  console.error("Usage: node --env-file=.env.local scripts/test-sms.mjs <phone_number>");
-  console.error("Example: node --env-file=.env.local scripts/test-sms.mjs 09171234567");
-  process.exit(1);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// --- load .env.local (simple parser, no deps) ---------------------------------
+function loadEnvLocal() {
+  try {
+    const raw = readFileSync(join(__dirname, "..", ".env.local"), "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (!m) continue;
+      const key = m[1];
+      const val = m[2].replace(/^["']|["']$/g, "");
+      if (process.env[key] === undefined) process.env[key] = val; // real env wins
+    }
+  } catch {
+    /* no .env.local — rely on real env */
+  }
 }
+loadEnvLocal();
+
+// --- args ---------------------------------------------------------------------
+const args = process.argv.slice(2);
+function arg(name, fallback) {
+  const i = args.indexOf(`--${name}`);
+  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
+}
+const hasFlag = (name) => args.includes(`--${name}`);
 
 // Normalize PH number to +63 format
 function normalize(phone) {
-  const cleaned = phone.replace(/[\s\-().]/g, "");
+  const cleaned = (phone ?? "").replace(/[\s\-().]/g, "");
   if (/^\+639\d{9}$/.test(cleaned)) return cleaned;
   if (/^09\d{9}$/.test(cleaned)) return "+63" + cleaned.slice(1);
   if (/^639\d{9}$/.test(cleaned)) return "+" + cleaned;
   return null;
 }
 
-const phone = normalize(raw);
-if (!phone) {
-  console.error(`❌ Invalid Philippine mobile number: ${raw}`);
-  console.error("   Accepted formats: 09171234567, +639171234567, 639171234567");
+const to = normalize(arg("to"));
+const from = arg("from", process.env.SMS_SENDER_ID ?? "iLoveJ");
+
+// Replica of buildVoucherMessage() so we test the EXACT production text.
+function voucherMessage(code = "ILOVEJ30-TEST", tier = 30) {
+  return (
+    `Thanks for joining ILOVEJ Rainy Giveaway! ` +
+    `Search ilovej ph on Google for ${tier}% OFF Korean kidswear.\n\n` +
+    `Voucher code: ${code}\n` +
+    `Valid for 2 weeks.`
+  );
+}
+
+const text = hasFlag("voucher")
+  ? voucherMessage()
+  : arg("text", "Good Day! This is a SMS for checking stability.");
+
+if (!to) {
+  console.error("ERROR: --to is required and must be a valid PH number, e.g. --to 09171234567");
   process.exit(1);
 }
 
 const apiKey = process.env.SMS_API_KEY;
 const apiSecret = process.env.SMS_API_SECRET;
-const from = process.env.SMS_SENDER_ID ?? "iLoveJ";
-const provider = process.env.SMS_PROVIDER ?? "mock";
-
-if (provider === "mock") {
-  console.log("⚠️  SMS_PROVIDER=mock — no real SMS will be sent.");
-  console.log("   Set SMS_PROVIDER=movider in .env.local to send a real SMS.");
-  process.exit(0);
-}
-
 if (!apiKey || !apiSecret) {
-  console.error("❌ SMS_API_KEY and SMS_API_SECRET must be set in .env.local");
+  console.error("ERROR: SMS_API_KEY / SMS_API_SECRET not found (.env.local or env).");
   process.exit(1);
 }
 
-const message = `[iLoveJ] TEST MESSAGE\n\nThis is a test SMS from your iLoveJ voucher campaign system.\nIf you received this, Movider is working correctly.`;
+// --- rough GSM-7 segment estimate (for context only) --------------------------
+const len = text.length;
+const segments = len <= 160 ? 1 : Math.ceil(len / 153);
 
-console.log(`📱 Sending test SMS via ${provider}`);
-console.log(`   To:   ${phone}`);
-console.log(`   From: ${from}`);
-console.log(`   Provider: ${provider}\n`);
+console.log("──────────────────────────────────────────────");
+console.log("Sending via Movider (https://api.movider.co/v1/sms):");
+console.log("  to      :", to);
+console.log("  from    :", from);
+console.log("  chars   :", len, `(~${segments} segment${segments > 1 ? "s" : ""})`);
+console.log("  api_key :", apiKey.slice(0, 6) + "…");
+console.log("  text    :");
+console.log(text.split("\n").map((l) => "    | " + l).join("\n"));
+console.log("──────────────────────────────────────────────");
 
-const body = new URLSearchParams({ api_key: apiKey, api_secret: apiSecret, to: phone, text: message, from });
-
-const res = await fetch("https://api.movider.net/v1/sms", {
-  method: "POST",
-  headers: { "Content-Type": "application/x-www-form-urlencoded" },
-  body,
+const body = new URLSearchParams({
+  api_key: apiKey,
+  api_secret: apiSecret,
+  to,
+  text,
+  from,
 });
 
-const data = await res.json();
-
-console.log("Raw API response:");
-console.log(JSON.stringify(data, null, 2));
-console.log();
-
-if (!res.ok || data.error) {
-  console.error(`❌ Failed: ${data.error_text ?? data.error ?? `HTTP ${res.status}`}`);
+try {
+  const res = await fetch("https://api.movider.co/v1/sms", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const rawText = await res.text();
+  console.log("HTTP status:", res.status, res.statusText);
+  console.log("RAW RESPONSE:");
+  try {
+    console.log(JSON.stringify(JSON.parse(rawText), null, 2));
+  } catch {
+    console.log(rawText);
+  }
+} catch (e) {
+  console.error("FETCH FAILED:", e);
   process.exit(1);
 }
 
-const result = data.phone_number_list?.[0];
-if (!result) {
-  console.error("❌ No result in response");
-  process.exit(1);
-}
-
-if (result.status === 1) {
-  console.log(`✅ SMS sent successfully!`);
-  console.log(`   Message ID: ${result.message_id ?? "n/a"}`);
-} else {
-  console.error(`❌ Send failed: ${result.error ?? `status ${result.status}`}`);
-  process.exit(1);
+// Also pull current balance so you can confirm whether this send was charged.
+try {
+  const bal = await fetch("https://api.movider.co/v1/balance", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ api_key: apiKey, api_secret: apiSecret }),
+  });
+  console.log("──────────────────────────────────────────────");
+  console.log("Balance after send:", await bal.text());
+} catch {
+  /* ignore */
 }

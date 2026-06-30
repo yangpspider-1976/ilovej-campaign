@@ -13,14 +13,20 @@ export function buildVoucherMessage(
   discountCode: string,
   discountTier: number
 ): string {
-  // No clickable URL on purpose ("Search ilovej.store on Google") — links can
-  // trigger SMS filtering / sender-ID scrutiny. Validity is a fixed 2 weeks,
-  // matching the expiry set when the voucher is assigned.
+  // Do NOT put the website domain (e.g. "ilovej.store") in the body. PH carriers
+  // / Movider content-filter any SMS containing a domain/URL pattern and silently
+  // drop it (it gets charged but is never delivered, and never even appears in
+  // the Movider logs) — and this happens regardless of the sender ID. Verified
+  // 2026-06-30: the identical message with "ilovej.store" was filtered, but with
+  // a plain brand name (no dot/TLD) it delivered. So we reference the brand by
+  // name ("ilovej ph", a space — not "ilovej.ph") and tell the user to search
+  // for it. Validity is a fixed 2 weeks, matching the voucher expiry set when the
+  // voucher is assigned. Kept short (~1 SMS segment) to minimise cost + filtering.
   return (
-    `Thank you for joining ILOVEJ Rainy Giveaway!\n\n` +
-    `Search ilovej.store on Google and use this voucher code to get ${discountTier}% OFF discount on Premium Quality and Korean made children's clothes.\n\n` +
-    `VOUCHER CODE: ${discountCode}\n\n` +
-    `The voucher code is valid for 2 weeks only. Shop now!`
+    `Thanks for joining ILOVEJ Rainy Giveaway! ` +
+    `Search ilovej ph on Google for ${discountTier}% OFF Korean kidswear.\n\n` +
+    `Voucher code: ${discountCode}\n` +
+    `Valid for 2 weeks.`
   );
 }
 
