@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { listLeads } from "@/lib/db";
+import { listLeads, getVoucherByLeadId } from "@/lib/db";
 import { maskPhone } from "@/lib/phone";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "changeme";
@@ -20,19 +20,23 @@ export async function GET(req: NextRequest) {
   const leads = await listLeads(campaignId, limit, offset);
 
   if (format === "csv") {
-    const rows = leads.map(l => [
+    const vouchers = await Promise.all(leads.map(l => getVoucherByLeadId(l.lead_id)));
+    const rows = leads.map((l, i) => [
       l.lead_id,
       l.campaign_id,
       l.name ?? "",
       maskPhone(l.phone_normalized),
       l.email ?? "",
+      vouchers[i]?.discount_code ?? "",
+      vouchers[i] ? `${vouchers[i]!.discount_tier}%` : "",
+      vouchers[i]?.status ?? "",
       l.utm_source ?? "",
       l.utm_campaign ?? "",
       l.created_at,
     ]);
 
     const csv = [
-      ["lead_id", "campaign_id", "name", "phone_masked", "email", "utm_source", "utm_campaign", "created_at"].join(","),
+      ["lead_id", "campaign_id", "name", "phone_masked", "email", "voucher_code", "voucher_tier", "voucher_status", "utm_source", "utm_campaign", "created_at"].join(","),
       ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")),
     ].join("\n");
 

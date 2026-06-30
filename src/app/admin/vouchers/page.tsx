@@ -3,8 +3,14 @@ export const dynamic = "force-dynamic";
 
 import { listVouchers, getTierCounts } from "@/lib/db";
 import { formatDateTimePH, formatDatePH } from "@/lib/datetime";
+import VoucherFilters from "@/components/VoucherFilters";
 
 const CAMPAIGN_ID = "ilovej_meta_test";
+
+const VALID_TIERS = new Set([30, 40, 50, 70, 90]);
+const VALID_STATUSES = new Set([
+  "available", "assigned", "sent", "failed", "used", "expired", "cancelled",
+]);
 
 const STATUS_CLASS: Record<string, string> = {
   available: "status-muted",
@@ -16,19 +22,35 @@ const STATUS_CLASS: Record<string, string> = {
   cancelled: "status-muted",
 };
 
-export default async function VouchersPage() {
+export default async function VouchersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tier?: string; status?: string }>;
+}) {
+  const sp = await searchParams;
+
+  const tierNum = sp.tier ? parseInt(sp.tier, 10) : undefined;
+  const tierFilter = tierNum != null && VALID_TIERS.has(tierNum) ? tierNum : undefined;
+  const statusFilter = sp.status && VALID_STATUSES.has(sp.status) ? sp.status : undefined;
+  const filtered = tierFilter != null || statusFilter != null;
+
   const [vouchers, tierCounts] = await Promise.all([
-    listVouchers(CAMPAIGN_ID, 200, 0),
+    listVouchers(CAMPAIGN_ID, 200, 0, { tier: tierFilter, status: statusFilter }),
     getTierCounts(CAMPAIGN_ID),
   ]);
-  const assigned = vouchers.filter(v => v.status !== "available");
+
+  // Accurate campaign-wide totals (tierCounts aggregates ALL vouchers, not just
+  // the 200-row page we load for the table).
+  const totalAll = tierCounts.reduce((s, tc) => s + tc.total, 0);
+  const availableAll = tierCounts.reduce((s, tc) => s + tc.available, 0);
+  const assignedAll = totalAll - availableAll;
 
   return (
     <>
       <div className="topbar">
         <div>
           <h1>Vouchers</h1>
-          <p>{assigned.length} assigned of {vouchers.length} total</p>
+          <p>{assignedAll} assigned of {totalAll} total</p>
         </div>
         <div className="actions">
           <a
@@ -69,6 +91,8 @@ export default async function VouchersPage() {
         ))}
       </div>
 
+      <VoucherFilters tier={sp.tier} status={sp.status} />
+
       <div className="table-wrap">
         <div className="table-scroll" style={{ maxHeight: 640 }}>
           <table>
@@ -87,7 +111,7 @@ export default async function VouchersPage() {
               {vouchers.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: "40px 16px" }}>
-                    No vouchers found.
+                    {filtered ? "No vouchers match this filter." : "No vouchers found."}
                   </td>
                 </tr>
               ) : (
@@ -121,7 +145,11 @@ export default async function VouchersPage() {
           </table>
         </div>
         <div className="table-pagination">
-          <span>{vouchers.length} vouchers &bull; {assigned.length} assigned</span>
+          <span>
+            {filtered
+              ? `Showing ${vouchers.length}${vouchers.length === 200 ? "+" : ""} matching voucher${vouchers.length === 1 ? "" : "s"}`
+              : `${vouchers.length}${vouchers.length === 200 ? "+" : ""} shown • ${assignedAll} assigned of ${totalAll}`}
+          </span>
         </div>
       </div>
     </>

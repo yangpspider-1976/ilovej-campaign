@@ -598,17 +598,24 @@ export async function markVoucherUsed(
   });
 }
 
-export async function listVouchers(campaignId?: string, limit = 100, offset = 0): Promise<Voucher[]> {
+export async function listVouchers(
+  campaignId?: string,
+  limit = 100,
+  offset = 0,
+  filters?: { tier?: number; status?: string }
+): Promise<Voucher[]> {
   await ensureReady();
-  const res = campaignId
-    ? await getDb().execute({
-        sql: "SELECT * FROM vouchers WHERE campaign_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        args: [campaignId, limit, offset],
-      })
-    : await getDb().execute({
-        sql: "SELECT * FROM vouchers ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        args: [limit, offset],
-      });
+  const where: string[] = [];
+  const args: (string | number)[] = [];
+  if (campaignId) { where.push("campaign_id = ?"); args.push(campaignId); }
+  if (filters?.tier != null) { where.push("discount_tier = ?"); args.push(filters.tier); }
+  if (filters?.status) { where.push("status = ?"); args.push(filters.status); }
+  const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  args.push(limit, offset);
+  const res = await getDb().execute({
+    sql: `SELECT * FROM vouchers ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    args,
+  });
   return res.rows.map(r => rowToVoucher(r as Record<string, Val>));
 }
 

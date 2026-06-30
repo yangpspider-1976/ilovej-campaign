@@ -60,6 +60,7 @@ export default async function LeadsPage() {
                 <th>Name</th>
                 <th>Email</th>
                 <th>Voucher</th>
+                <th>Voucher Code</th>
                 <th>UTM Source</th>
                 <th>UTM Campaign</th>
                 <th>Claimed At</th>
@@ -68,7 +69,7 @@ export default async function LeadsPage() {
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", color: "var(--muted)", padding: "40px 16px" }}>
+                  <td colSpan={8} style={{ textAlign: "center", color: "var(--muted)", padding: "40px 16px" }}>
                     No leads yet.
                   </td>
                 </tr>
@@ -81,6 +82,9 @@ export default async function LeadsPage() {
                     <td>{lead.name ?? <span className="inline-muted">—</span>}</td>
                     <td style={{ fontSize: 13 }}>{lead.email ?? <span className="inline-muted">—</span>}</td>
                     <td><VoucherBadge voucher={vouchers[i]} /></td>
+                    <td style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 600 }}>
+                      {vouchers[i]?.discount_code ?? <span className="inline-muted">—</span>}
+                    </td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>{lead.utm_source ?? "—"}</td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>{lead.utm_campaign ?? "—"}</td>
                     <td style={{ fontSize: 13, color: "var(--muted)" }}>
