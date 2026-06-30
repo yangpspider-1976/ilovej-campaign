@@ -59,7 +59,7 @@ const from = arg("from", process.env.SMS_SENDER_ID ?? "iLoveJ");
 function voucherMessage(code = "ILOVEJ30-TEST", tier = 30) {
   return (
     `Thanks for joining ILOVEJ Rainy Giveaway! ` +
-    `Search ilovej ph on Google for ${tier}% OFF Korean kidswear.\n\n` +
+    `Visit ilovej ph on Google for ${tier}% OFF Korean kidswear.\n\n` +
     `Voucher code: ${code}\n` +
     `Valid for 2 weeks.`
   );

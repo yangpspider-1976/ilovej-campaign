@@ -24,7 +24,7 @@ export function buildVoucherMessage(
   // voucher is assigned. Kept short (~1 SMS segment) to minimise cost + filtering.
   return (
     `Thanks for joining ILOVEJ Rainy Giveaway! ` +
-    `Search ilovej ph on Google for ${discountTier}% OFF Korean kidswear.\n\n` +
+    `Visit ilovej ph on Google for ${discountTier}% OFF Korean kidswear.\n\n` +
     `Voucher code: ${discountCode}\n` +
     `Valid for 2 weeks.`
   );
