@@ -7,7 +7,7 @@ import VoucherFilters from "@/components/VoucherFilters";
 
 const CAMPAIGN_ID = "ilovej_meta_test";
 
-const VALID_TIERS = new Set([30, 40, 50, 70, 90]);
+const VALID_TIERS = new Set([30, 40, 50, 60, 70, 80, 90]);
 const VALID_STATUSES = new Set([
   "available", "assigned", "sent", "failed", "used", "expired", "cancelled",
 ]);
@@ -66,7 +66,7 @@ export default async function VouchersPage({
         </div>
       </div>
 
-      <div className="stats" style={{ marginBottom: 20, gridTemplateColumns: "repeat(5, minmax(140px, 1fr))" }}>
+      <div className="stats" style={{ marginBottom: 20, gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}>
         {tierCounts.map(tc => (
           <div key={tc.discount_tier} className="panel" style={{ padding: "16px 18px" }}>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>

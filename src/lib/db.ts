@@ -69,7 +69,10 @@ async function initSchema(): Promise<void> {
       campaign_id TEXT NOT NULL,
       lead_id TEXT,
       discount_tier INTEGER NOT NULL,
-      discount_code TEXT NOT NULL UNIQUE,
+      -- NOT unique: codes are shared per tier (every 30% winner gets ILJRAINY30,
+      -- etc.), matching the real Shopify discount codes. Uniqueness/abuse limits
+      -- are enforced Shopify-side (per-code usage cap + one-use-per-customer).
+      discount_code TEXT NOT NULL,
       shopify_discount_id TEXT,
       assigned_at TEXT,
       expires_at TEXT,
@@ -121,6 +124,54 @@ async function initSchema(): Promise<void> {
   `);
 
   await migrateLeadConsentColumns();
+  await migrateVoucherCodeUnique();
+}
+
+// The original vouchers table declared `discount_code TEXT NOT NULL UNIQUE`
+// (one unique code per voucher). The campaign now uses shared per-tier codes
+// (ILJRAINY30 for all 30% winners, etc.), so that UNIQUE must go. SQLite can't
+// drop a column constraint in place, so rebuild the table when the old schema is
+// detected. Guarded so it runs at most once (only while UNIQUE is still present).
+async function migrateVoucherCodeUnique(): Promise<void> {
+  const db = getDb();
+  const res = await db.execute(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='vouchers'"
+  );
+  const ddl = res.rows.length ? String((res.rows[0] as Record<string, Val>).sql ?? "") : "";
+  if (!/discount_code\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i.test(ddl)) return;
+
+  await db.executeMultiple(`
+    PRAGMA foreign_keys=OFF;
+    CREATE TABLE vouchers_new (
+      voucher_id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      lead_id TEXT,
+      discount_tier INTEGER NOT NULL,
+      discount_code TEXT NOT NULL,
+      shopify_discount_id TEXT,
+      assigned_at TEXT,
+      expires_at TEXT,
+      status TEXT DEFAULT 'available',
+      shopify_order_id TEXT,
+      order_amount REAL,
+      customer_email TEXT,
+      customer_phone TEXT,
+      used_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (campaign_id) REFERENCES campaigns(campaign_id),
+      FOREIGN KEY (lead_id) REFERENCES leads(lead_id)
+    );
+    INSERT INTO vouchers_new SELECT
+      voucher_id, campaign_id, lead_id, discount_tier, discount_code,
+      shopify_discount_id, assigned_at, expires_at, status, shopify_order_id,
+      order_amount, customer_email, customer_phone, used_at, created_at
+    FROM vouchers;
+    DROP TABLE vouchers;
+    ALTER TABLE vouchers_new RENAME TO vouchers;
+    CREATE INDEX IF NOT EXISTS idx_vouchers_campaign_tier ON vouchers(campaign_id, discount_tier, status);
+    CREATE INDEX IF NOT EXISTS idx_vouchers_code ON vouchers(discount_code);
+    PRAGMA foreign_keys=ON;
+  `);
 }
 
 // Add consent-audit columns to leads if an older DB predates them. SQLite has no
@@ -137,7 +188,22 @@ async function migrateLeadConsentColumns(): Promise<void> {
   }
 }
 
-const TOTAL_VOUCHERS = 1000;
+// The real Shopify discount codes. Each tier has ONE shared code (ILJRAINY30 …
+// ILJRAINY90) with a fixed quantity; the app hands out that tier's code to up to
+// `count` winners. Weighted assignment (assignVoucher) uses `count` as the
+// weight, so the expected distribution matches inventory and self-corrects as a
+// tier depletes. Total across all tiers = TOTAL_VOUCHERS.
+const VOUCHER_CODE_PREFIX = "ILJRAINY";
+const VOUCHER_DISTRIBUTION: { tier: number; count: number }[] = [
+  { tier: 30, count: 440 },
+  { tier: 40, count: 300 },
+  { tier: 50, count: 100 },
+  { tier: 60, count: 50 },
+  { tier: 70, count: 50 },
+  { tier: 80, count: 50 },
+  { tier: 90, count: 10 },
+];
+const TOTAL_VOUCHERS = VOUCHER_DISTRIBUTION.reduce((s, d) => s + d.count, 0); // 1000
 
 async function seedDefaultCampaign(): Promise<void> {
   const db = getDb();
@@ -174,27 +240,13 @@ async function seedDefaultCampaign(): Promise<void> {
   const voucherCount = Number(countRes.rows[0].c);
   if (voucherCount >= TOTAL_VOUCHERS) return;
 
-  // Seed 1,000 vouchers: 30%×600, 40%×250, 50%×100, 70%×40, 90%×10
-  const tiers = [
-    { tier: 30, count: 600 },
-    { tier: 40, count: 250 },
-    { tier: 50, count: 100 },
-    { tier: 70, count: 40 },
-    { tier: 90, count: 10 },
-  ];
-
-  // Generate guaranteed-unique discount codes. An 8-hex-char suffix makes
-  // collisions astronomically unlikely, and the Set guard makes them impossible.
-  const seenCodes = new Set<string>();
+  // Seed the inventory per VOUCHER_DISTRIBUTION. Each voucher row of a tier
+  // carries that tier's shared Shopify code (e.g. every 30% row = ILJRAINY30);
+  // the rows still track per-lead assignment, status, expiry, and orders.
   const voucherStmts: { sql: string; args: (string | number)[] }[] = [];
-  for (const { tier, count } of tiers) {
+  for (const { tier, count } of VOUCHER_DISTRIBUTION) {
+    const code = `${VOUCHER_CODE_PREFIX}${tier}`;
     for (let i = 0; i < count; i++) {
-      let code: string;
-      do {
-        const suffix = randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
-        code = `ILOVEJ${tier}-${suffix}`;
-      } while (seenCodes.has(code));
-      seenCodes.add(code);
       voucherStmts.push({
         sql: "INSERT INTO vouchers (voucher_id, campaign_id, discount_tier, discount_code, status) VALUES (?, ?, ?, ?, 'available')",
         args: [randomUUID(), "ilovej_meta_test", tier, code],
@@ -512,26 +564,21 @@ export async function assignVoucher(
 
   const tierCounts = await getTierCounts(campaignId);
 
-  const weights = [
-    { tier: 30, weight: 60 },
-    { tier: 40, weight: 25 },
-    { tier: 50, weight: 10 },
-    { tier: 70, weight: 4 },
-    { tier: 90, weight: 1 },
-  ];
-
-  const availableTiers = weights.filter(w => {
+  // Weight each tier by its inventory count, so the odds mirror the intended
+  // distribution and self-correct as tiers deplete (a tier with 0 available is
+  // dropped from the draw).
+  const availableTiers = VOUCHER_DISTRIBUTION.filter(w => {
     const tc = tierCounts.find(t => t.discount_tier === w.tier);
     return tc && tc.available > 0;
   });
 
   if (availableTiers.length === 0) return null;
 
-  const totalWeight = availableTiers.reduce((s, t) => s + t.weight, 0);
+  const totalWeight = availableTiers.reduce((s, t) => s + t.count, 0);
   let rand = Math.random() * totalWeight;
   let selectedTier = availableTiers[0].tier;
-  for (const { tier, weight } of availableTiers) {
-    rand -= weight;
+  for (const { tier, count } of availableTiers) {
+    rand -= count;
     if (rand <= 0) { selectedTier = tier; break; }
   }
 
@@ -571,7 +618,16 @@ export async function updateVoucherStatus(voucherId: string, status: string): Pr
 
 export async function getVoucherByCode(code: string): Promise<Voucher | undefined> {
   await ensureReady();
-  const res = await getDb().execute({ sql: "SELECT * FROM vouchers WHERE discount_code = ?", args: [code] });
+  // Codes are shared per tier (many rows share ILJRAINY30), so for order/webhook
+  // attribution pick a voucher actually issued to a customer (assigned/sent) and
+  // not yet used, oldest first — this keeps per-tier "used" counts accurate.
+  // Exact per-customer attribution isn't possible from a shared code alone.
+  const res = await getDb().execute({
+    sql: `SELECT * FROM vouchers
+          WHERE discount_code = ? AND status IN ('assigned', 'sent')
+          ORDER BY assigned_at ASC LIMIT 1`,
+    args: [code],
+  });
   return res.rows.length > 0 ? rowToVoucher(res.rows[0] as Record<string, Val>) : undefined;
 }
 

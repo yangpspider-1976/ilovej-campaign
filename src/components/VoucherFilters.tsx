@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-const TIERS = [30, 40, 50, 70, 90];
+const TIERS = [30, 40, 50, 60, 70, 80, 90];
 const STATUSES = ["available", "assigned", "sent", "failed", "used", "expired", "cancelled"];
 
 const selectStyle: React.CSSProperties = {
